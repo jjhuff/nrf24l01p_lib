@@ -476,7 +476,7 @@ ISR(PCINT2_vect)
     if (status & (1<<RX_DR))
     {
     	pipe_number =  (status & 0xE) >> 1;
-        printf("rx %02x\n", pipe_number);
+        //printf("rx %02x\n", pipe_number);
     	radio_rxhandler(pipe_number);
     }
 
