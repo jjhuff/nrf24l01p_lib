@@ -58,8 +58,7 @@ extern void radio_rxhandler(uint8_t pipenumber);
 /**
  * Retrieve the status register.
  */
-static uint8_t get_status(void)
-{
+static uint8_t get_status(void) {
     uint8_t status = 0;
     CSN_LOW();
 
@@ -69,14 +68,14 @@ static uint8_t get_status(void)
 
     return status;
 }
+
 /**
  * Set a register in the radio
  * \param reg The register value defined in nRF24L01.h (e.g. CONFIG, EN_AA, &c.).
  * \param value The value to write to the given register (the whole register is overwritten).
  * \return The status register.
  */
-static uint8_t set_register(radio_register_t reg, uint8_t* value, uint8_t len)
-{
+static uint8_t set_register(radio_register_t reg, uint8_t* value, uint8_t len) {
     uint8_t status;
     CSN_LOW();
 
@@ -98,11 +97,9 @@ static uint8_t set_register(radio_register_t reg, uint8_t* value, uint8_t len)
  *         register contents, then the remaining bytes will be overwritten with 0xFF.
  * \param len The length of the buffer.
  */
-static uint8_t get_register(radio_register_t reg, uint8_t* buffer, uint8_t len)
-{
+static uint8_t get_register(radio_register_t reg, uint8_t* buffer, uint8_t len) {
     uint8_t status, i;
-    for (i = 0; i < len; i++)
-    {
+    for (i = 0; i < len; i++) {
         // If the buffer is too long for the register results, then the radio will interpret the extra bytes as instructions.
         // To remove the risk, we set the buffer elements to NOP instructions.
         buffer[i] = 0xFF;
@@ -126,22 +123,21 @@ static uint8_t get_register(radio_register_t reg, uint8_t* buffer, uint8_t len)
  * \param buffer An array for the instruction's return data.  This can be NULL if the instruction has no output.
  * \param len The length of the data and buffer arrays.
  */
-static void send_instruction(uint8_t instruction, uint8_t* data, uint8_t* buffer, uint8_t len)
-{
+static void send_instruction(uint8_t instruction, uint8_t* data, uint8_t* buffer, uint8_t len) {
     CSN_LOW();
     // send the instruction
     send_spi(instruction);
     // pass in args
-    if (len > 0)
-    {
-        if (buffer == NULL)    //
+    if (len > 0) {
+        if (buffer == NULL) {   //
             for (uint8_t i = 0; i < len; i++) {
                 send_spi(data[i]);
             }
-        else
+        } else {
             for (uint8_t i = 0; i < len; i++) {
                 data[i] = send_spi(buffer[i]);
             }
+        }
     }
     // resynch SPI
     CSN_HIGH();
@@ -150,12 +146,10 @@ static void send_instruction(uint8_t instruction, uint8_t* data, uint8_t* buffer
 /**
  * Switch the radio to receive mode.  If the radio is already in receive mode, this does nothing.
  */
-static void set_rx_mode(void)
-{
+static void set_rx_mode(void) {
     uint8_t config;
     get_register(CONFIG, &config, 1);
-    if ((config & (1<<PRIM_RX)) == 0)
-    {
+    if ((config & (1<<PRIM_RX)) == 0) {
         config |= (1<<PRIM_RX);
         set_register(CONFIG, &config, 1);
         // the radio takes 130 us to power up the receiver.
@@ -167,12 +161,10 @@ static void set_rx_mode(void)
 /**
  * Switch the radio to transmit mode.  If the radio is already in transmit mode, this does nothing.
  */
-static void set_tx_mode(void)
-{
+static void set_tx_mode(void) {
     uint8_t config;
     get_register(CONFIG, &config, 1);
-    if ((config & (1<<PRIM_RX)) != 0)
-    {
+    if ((config & (1<<PRIM_RX)) != 0) {
         config &= ~(1<<PRIM_RX);
         set_register(CONFIG, &config, 1);
         // The radio takes 130 us to power up the transmitter
@@ -188,10 +180,8 @@ static void set_tx_mode(void)
  * the pipe 0 address is set to the transmit address while the radio is transmitting (this is how the radio receives
  * auto-ack packets).
  */
-static void reset_pipe0_address(void)
-{
-    if (rx_pipe_widths[RADIO_PIPE_0] != 0)
-    {
+static void reset_pipe0_address(void) {
+    if (rx_pipe_widths[RADIO_PIPE_0] != 0) {
         // reset the pipe 0 address if pipe 0 is enabled.
         set_register(RX_ADDR_P0, (uint8_t*)rx_pipe0_address, ADDRESS_LENGTH);
     }
@@ -202,8 +192,7 @@ static void reset_pipe0_address(void)
  * This configures the radio to its max-power, max-packet-header-length settings.  If you want to reduce power consumption
  * or increase on-air payload bandwidth, you'll have to change the config.
  */
-static void configure_registers(void)
-{
+static void configure_registers(void) {
     uint8_t value;
 
     setup_spi(SPI_MODE_0, SPI_MSB, SPI_NO_INTERRUPT, SPI_MSTR_CLK16);
@@ -235,8 +224,7 @@ static void configure_registers(void)
     send_instruction(FLUSH_RX, NULL, NULL, 0);
 }
 
-void Radio_Init()
-{
+void Radio_Init() {
     transmit_lock = 0;
 
     // disable radio during config
@@ -270,16 +258,14 @@ void Radio_Init()
 // default address for pipe 3 is 0xc2c2c2c2c4 (disabled)
 // default address for pipe 4 is 0xc2c2c2c2c5 (disabled)
 // default address for pipe 5 is 0xc2c2c2c2c6 (disabled)
-void Radio_Configure_Rx(RADIO_PIPE pipe, uint8_t* address, uint8_t enable)
-{
+void Radio_Configure_Rx(RADIO_PIPE pipe, uint8_t* address, uint8_t enable) {
     uint8_t value;
     uint8_t use_aa = 1;
     uint8_t payload_width = 32;
     if (payload_width < 1 || payload_width > 32 || pipe < RADIO_PIPE_0 || pipe > RADIO_PIPE_5) return;
 
     // store the pipe 0 address so that it can be overwritten when transmitting with auto-ack enabled.
-    if (pipe == RADIO_PIPE_0)
-    {
+    if (pipe == RADIO_PIPE_0) {
         rx_pipe0_address[0] = address[0];
         rx_pipe0_address[1] = address[1];
         rx_pipe0_address[2] = address[2];
@@ -293,10 +279,11 @@ void Radio_Configure_Rx(RADIO_PIPE pipe, uint8_t* address, uint8_t enable)
 
     // Set auto-ack.
     get_register(EN_AA, &value, 1);
-    if (use_aa)
+    if (use_aa) {
         value |= (1<<pipe);
-    else
+    } else {
         value &= ~(1<<pipe);
+    }
     set_register(EN_AA, &value, 1);
 
     // Set the pipe's payload width.  If the pipe is being disabled, then the payload width is set to 0.
@@ -306,17 +293,17 @@ void Radio_Configure_Rx(RADIO_PIPE pipe, uint8_t* address, uint8_t enable)
 
     // Enable or disable the pipe.
     get_register(EN_RXADDR, &value, 1);
-    if (enable)
+    if (enable) {
         value |= (1<<pipe);
-    else
+    } else {
         value &= ~(1<<pipe);
+    }
     set_register(EN_RXADDR, &value, 1);
 
 }
 
 // default transmitter address is 0xe7e7e7e7e7.
-void Radio_Set_Tx_Addr(uint8_t* address)
-{
+void Radio_Set_Tx_Addr(uint8_t* address) {
     tx_address[0] = address[0];
     tx_address[1] = address[1];
     tx_address[2] = address[2];
@@ -325,8 +312,7 @@ void Radio_Set_Tx_Addr(uint8_t* address)
     set_register(TX_ADDR, address, ADDRESS_LENGTH);
 }
 
-void Radio_Configure(RADIO_DATA_RATE dr, RADIO_TX_POWER power)
-{
+void Radio_Configure(RADIO_DATA_RATE dr, RADIO_TX_POWER power) {
     uint8_t value;
 
     if (power < RADIO_LOWEST_POWER || power > RADIO_HIGHEST_POWER || dr < RADIO_250KBPS || dr > RADIO_2MBPS) return;
@@ -355,8 +341,7 @@ void Radio_Configure(RADIO_DATA_RATE dr, RADIO_TX_POWER power)
     set_register(RF_SETUP, &value, 1);
 }
 
-uint8_t Radio_Transmit(radiopacket_t* payload, RADIO_TX_WAIT wait)
-{
+uint8_t Radio_Transmit(radiopacket_t* payload, RADIO_TX_WAIT wait) {
     //if (block && transmit_lock) while (transmit_lock);
     //if (!block && transmit_lock) return 0;
     uint8_t len = 32;
@@ -379,8 +364,7 @@ uint8_t Radio_Transmit(radiopacket_t* payload, RADIO_TX_WAIT wait)
     // start the transmission.
     CE_HIGH();
 
-    if (wait == RADIO_WAIT_FOR_TX)
-    {
+    if (wait == RADIO_WAIT_FOR_TX) {
         while (transmit_lock);
         return tx_last_status;
     }
@@ -388,8 +372,7 @@ uint8_t Radio_Transmit(radiopacket_t* payload, RADIO_TX_WAIT wait)
     return RADIO_TX_SUCCESS;
 }
 
-RADIO_RX_STATUS Radio_Receive(radiopacket_t* buffer)
-{
+RADIO_RX_STATUS Radio_Receive(radiopacket_t* buffer) {
     uint8_t len = 32;
     uint8_t status;
     uint8_t pipe_number;
@@ -403,21 +386,18 @@ RADIO_RX_STATUS Radio_Receive(radiopacket_t* buffer)
     status = get_status();
     pipe_number =  (status & 0xE) >> 1;
 
-    if (pipe_number == RADIO_PIPE_EMPTY)
-    {
+    if (pipe_number == RADIO_PIPE_EMPTY) {
         result = RADIO_RX_FIFO_EMPTY;
         doMove = 0;
     }
 
-    if (rx_pipe_widths[pipe_number] > len)
-    {
+    if (rx_pipe_widths[pipe_number] > len) {
         // the buffer isn't big enough, so don't copy the data.
         result = RADIO_RX_INVALID_ARGS;
         doMove = 0;
     }
 
-    if (doMove)
-    {
+    if (doMove) {
         // Move the data payload into the local
         send_instruction(R_RX_PAYLOAD, (uint8_t*)buffer, (uint8_t*)buffer, rx_pipe_widths[pipe_number]);
 
@@ -438,12 +418,10 @@ RADIO_RX_STATUS Radio_Receive(radiopacket_t* buffer)
 }
 
 // This is only accurate if all the failed packets were sent using auto-ack.
-uint8_t Radio_Success_Rate()
-{
+uint8_t Radio_Success_Rate() {
     uint16_t wh = tx_history;
     uint8_t weight = 0;
-    while (wh != 0)
-    {
+    while (wh != 0) {
         if ((wh & 1) != 0) weight++;
         wh >>= 1;
     }
@@ -452,14 +430,12 @@ uint8_t Radio_Success_Rate()
     return wh;
 }
 
-void Radio_Flush()
-{
+void Radio_Flush() {
     send_instruction(FLUSH_TX, NULL, NULL, 0);
     send_instruction(FLUSH_RX, NULL, NULL, 0);
 }
 
-void Radio_DumpStatus()
-{
+void Radio_DumpStatus() {
     for(uint8_t reg=0;reg<0x18;reg++) {
         printf("%02x ", reg);
     }
@@ -473,8 +449,7 @@ void Radio_DumpStatus()
 }
 
 // Interrupt handler
-ISR(PCINT2_vect)
-{
+ISR(PCINT2_vect) {
     uint8_t status;
     uint8_t pipe_number;
 
@@ -483,17 +458,15 @@ ISR(PCINT2_vect)
     status = get_status();
 
     // Do we have new RX darta?
-    if (status & (1<<RX_DR))
-    {
+    if (status & (1<<RX_DR)) {
         pipe_number =  (status & 0xE) >> 1;
         //printf("rx %02x\n", pipe_number);
         radio_rxhandler(pipe_number);
     }
 
     // We can get the TX_DS or the MAX_RT interrupt, but not both.
-    if (status & (1<<TX_DS))
-    {
-        puts("tx");
+    if (status & (1<<TX_DS)) {
+        //puts("tx");
         // if there's nothing left to transmit, switch back to receive mode.
         transmit_lock = 0;
         reset_pipe0_address();
@@ -504,10 +477,8 @@ ISR(PCINT2_vect)
         tx_history |= 1;
 
         tx_last_status = RADIO_TX_SUCCESS;
-    }
-    else if (status & (1<<MAX_RT))
-    {
-        puts("max tx");
+    } else if (status & (1<<MAX_RT)) {
+        //puts("max tx");
         send_instruction(FLUSH_TX, NULL, NULL, 0);
 
         transmit_lock = 0;
