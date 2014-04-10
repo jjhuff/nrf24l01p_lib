@@ -329,7 +329,7 @@ void Radio_Configure(RADIO_DATA_RATE dr, RADIO_TX_POWER power)
 {
 	uint8_t value;
 
-	if (power < RADIO_LOWEST_POWER || power > RADIO_HIGHEST_POWER || dr < RADIO_1MBPS || dr > RADIO_2MBPS) return;
+	if (power < RADIO_LOWEST_POWER || power > RADIO_HIGHEST_POWER || dr < RADIO_250KBPS || dr > RADIO_2MBPS) return;
 
 	// set the data rate and power bits in the RF_SETUP register
 	get_register(RF_SETUP, &value, 1);
@@ -337,10 +337,20 @@ void Radio_Configure(RADIO_DATA_RATE dr, RADIO_TX_POWER power)
 	value |= 3 << RF_PWR;			// set the power bits so that the & will mask the power value in properly.
 	value &= power << RF_PWR;		// mask the power value into the RF status byte.
 
-	if (dr)
-		value |= 1<<RF_DR_HIGH;
-	else
-		value &= ~(1<<RF_DR_HIGH);
+	switch(dr) {
+		case RADIO_250KBPS:
+			value |= 1<<RF_DR_LOW;
+			value &= ~(1<<RF_DR_HIGH);
+			break;
+		case RADIO_1MBPS:
+			value &= ~(1<<RF_DR_LOW);
+			value &= ~(1<<RF_DR_HIGH);
+			break;
+		case RADIO_2MBPS:
+			value &= ~(1<<RF_DR_LOW);
+			value |= 1<<RF_DR_HIGH;
+			break;
+	}
 
 	set_register(RF_SETUP, &value, 1);
 }

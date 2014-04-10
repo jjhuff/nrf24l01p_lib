@@ -39,8 +39,9 @@ typedef enum _radio_tx_power {
 } RADIO_TX_POWER;
 
 typedef enum _radio_dr {
-	RADIO_1MBPS = 0,		// that's Mbps, not MBps.
-	RADIO_2MBPS = 1,
+	RADIO_250KBPS = 0,
+	RADIO_1MBPS = 1,
+	RADIO_2MBPS = 2,
 } RADIO_DATA_RATE;
 
 typedef enum _radio_receive {

@@ -140,7 +140,7 @@ typedef uint8_t radio_register_t;
 
 /// RF_SETUP Register
 #define RF_CONT_WAVE  7
-#define RF_DR_LOw  5
+#define RF_DR_LOW  5
 /// Force PLL lock signal.  See http://en.wikipedia.org/wiki/Phase-locked_loop.  This shouldn't be set.
 #define PLL_LOCK    4
 /// 0 - On-air data rate is 1 Mbps.  1 - On-air data rate is 2 Mbps.

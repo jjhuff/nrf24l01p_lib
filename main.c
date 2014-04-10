@@ -34,7 +34,7 @@ int main(void)
     _delay_ms(100);
     Radio_Init();
     _delay_ms(200);
-    Radio_Configure(RADIO_1MBPS, RADIO_HIGH_POWER);
+    Radio_Configure(RADIO_250KBPS, RADIO_HIGH_POWER);
     Radio_Configure_Rx(RADIO_PIPE_0, address[0], ENABLE);
     Radio_Configure_Rx(RADIO_PIPE_1, address[2], ENABLE);
 
