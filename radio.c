@@ -23,31 +23,35 @@
 
 // Pin definitions for chip select and chip enable on the radio module
 #define CE_DDR        DDRB
-#define CE_PORT        PORTB
+#define CE_PORT       PORTB
 #define CE_PIN        PORTB0
 
-#define CSN_DDR        DDRB
-#define CSN_PORT    PORTB
-#define CSN_PIN        PORTB1
+#define CSN_DDR       DDRB
+#define CSN_PORT      PORTB
+#define CSN_PIN       PORTB1
 
-#define IRQ_DDR        DDRD
-#define IRQ_PORT    PORTD
-#define IRQ_PIN        PORTD6
+#define IRQ_DDR       DDRD
+#define IRQ_PORT      PORTD
+#define IRQ_PIN       PORTD6
 
 // Definitions for selecting and enabling the radio
 #define CSN_HIGH()    CSN_PORT |=  1<<CSN_PIN;
-#define CSN_LOW()    CSN_PORT &= ~(1<<CSN_PIN);
-#define CE_HIGH()    CE_PORT |=  1<<CE_PIN;
-#define CE_LOW()    CE_PORT &= ~(1<<CE_PIN);
+#define CSN_LOW()     CSN_PORT &= ~(1<<CSN_PIN);
+#define CE_HIGH()     CE_PORT |=  1<<CE_PIN;
+#define CE_LOW()      CE_PORT &= ~(1<<CE_PIN);
 
 // Flag which denotes that the radio is currently transmitting
 static volatile uint8_t transmit_lock;
+
 // tracks the payload widths of the Rx pipes
 static volatile uint8_t rx_pipe_widths[6] = {32, 32, 0, 0, 0, 0};
+
 // holds the transmit address (Rx pipe 0 is set to this address when transmitting with auto-ack enabled).
 static volatile uint8_t tx_address[5] = { 0xe7, 0xe7, 0xe7, 0xe7, 0xe7 };
+
 // holds the receiver address for Rx pipe 0 (the address is overwritten when transmitting with auto-ack enabled).
 static volatile uint8_t rx_pipe0_address[5] = { 0xe7, 0xe7, 0xe7, 0xe7, 0xe7 };
+
 // the driver keeps track of the success status for the last 16 transmissions
 static volatile uint16_t tx_history = 0xFF;
 
@@ -204,7 +208,6 @@ static void configure_registers(void) {
     // set Enhanced Shockburst retry to every 586 us, up to 5 times.  If packet collisions are a problem even with AA enabled,
     // then consider changing the retry delay to be different on the different stations so that they do not keep colliding on each retry.
     value = 0xFF;
-    //value = 0x10;
     set_register(SETUP_RETR, &value, 1);
 
     // Set to use 2.4 GHz channel 110.
@@ -250,6 +253,35 @@ void Radio_Init() {
 
     // enable radio as a receiver
     CE_HIGH();
+}
+
+void Radio_Configure(RADIO_DATA_RATE dr, RADIO_TX_POWER power) {
+    uint8_t value;
+
+    if (power < RADIO_LOWEST_POWER || power > RADIO_HIGHEST_POWER || dr < RADIO_250KBPS || dr > RADIO_2MBPS) return;
+
+    // set the data rate and power bits in the RF_SETUP register
+    get_register(RF_SETUP, &value, 1);
+
+    value |= 3 << RF_PWR;            // set the power bits so that the & will mask the power value in properly.
+    value &= power << RF_PWR;        // mask the power value into the RF status byte.
+
+    switch(dr) {
+        case RADIO_250KBPS:
+            value |= 1<<RF_DR_LOW;
+            value &= ~(1<<RF_DR_HIGH);
+            break;
+        case RADIO_1MBPS:
+            value &= ~(1<<RF_DR_LOW);
+            value &= ~(1<<RF_DR_HIGH);
+            break;
+        case RADIO_2MBPS:
+            value &= ~(1<<RF_DR_LOW);
+            value |= 1<<RF_DR_HIGH;
+            break;
+    }
+
+    set_register(RF_SETUP, &value, 1);
 }
 
 // default address for pipe 0 is 0xe7e7e7e7e7
@@ -310,35 +342,6 @@ void Radio_Set_Tx_Addr(uint8_t* address) {
     tx_address[3] = address[3];
     tx_address[4] = address[4];
     set_register(TX_ADDR, address, ADDRESS_LENGTH);
-}
-
-void Radio_Configure(RADIO_DATA_RATE dr, RADIO_TX_POWER power) {
-    uint8_t value;
-
-    if (power < RADIO_LOWEST_POWER || power > RADIO_HIGHEST_POWER || dr < RADIO_250KBPS || dr > RADIO_2MBPS) return;
-
-    // set the data rate and power bits in the RF_SETUP register
-    get_register(RF_SETUP, &value, 1);
-
-    value |= 3 << RF_PWR;            // set the power bits so that the & will mask the power value in properly.
-    value &= power << RF_PWR;        // mask the power value into the RF status byte.
-
-    switch(dr) {
-        case RADIO_250KBPS:
-            value |= 1<<RF_DR_LOW;
-            value &= ~(1<<RF_DR_HIGH);
-            break;
-        case RADIO_1MBPS:
-            value &= ~(1<<RF_DR_LOW);
-            value &= ~(1<<RF_DR_HIGH);
-            break;
-        case RADIO_2MBPS:
-            value &= ~(1<<RF_DR_LOW);
-            value |= 1<<RF_DR_HIGH;
-            break;
-    }
-
-    set_register(RF_SETUP, &value, 1);
 }
 
 uint8_t Radio_Transmit(radiopacket_t* payload, RADIO_TX_WAIT wait) {
@@ -460,13 +463,11 @@ ISR(PCINT2_vect) {
     // Do we have new RX darta?
     if (status & (1<<RX_DR)) {
         pipe_number =  (status & 0xE) >> 1;
-        //printf("rx %02x\n", pipe_number);
         radio_rxhandler(pipe_number);
     }
 
     // We can get the TX_DS or the MAX_RT interrupt, but not both.
     if (status & (1<<TX_DS)) {
-        //puts("tx");
         // if there's nothing left to transmit, switch back to receive mode.
         transmit_lock = 0;
         reset_pipe0_address();
@@ -478,7 +479,6 @@ ISR(PCINT2_vect) {
 
         tx_last_status = RADIO_TX_SUCCESS;
     } else if (status & (1<<MAX_RT)) {
-        //puts("max tx");
         send_instruction(FLUSH_TX, NULL, NULL, 0);
 
         transmit_lock = 0;
