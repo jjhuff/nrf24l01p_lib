@@ -203,7 +203,7 @@ static void configure_registers(void) {
 
     // set Enhanced Shockburst retry to every 586 us, up to 5 times.  If packet collisions are a problem even with AA enabled,
     // then consider changing the retry delay to be different on the different stations so that they do not keep colliding on each retry.
-    value = 0x15;
+    value = 0xFF;
     //value = 0x10;
     set_register(SETUP_RETR, &value, 1);
 
