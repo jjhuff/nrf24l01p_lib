@@ -17,7 +17,6 @@
 
 #include <stddef.h>
 #include "nRF24L01.h"
-#include "packet.h"
 
 #define RADIO_ADDRESS_LENGTH 5
 
@@ -132,7 +131,7 @@ void Radio_Set_Tx_Addr(uint8_t* address);
  *         (MAX_RT interrupt asserted, i.e. no ack was received and the maximum number of retries were sent), then
  *         Radio_Transmit returns RADIO_TX_MAX_RT.
  */
-uint8_t Radio_Transmit(radiopacket_t* payload, RADIO_TX_WAIT wait);
+uint8_t Radio_Transmit(const void* payload, RADIO_TX_WAIT wait);
 
 /**
  * Get the next packet from the Rx FIFO.
@@ -140,7 +139,7 @@ uint8_t Radio_Transmit(radiopacket_t* payload, RADIO_TX_WAIT wait);
  *         If the FIFO is empty, then this structure will be left alone.
  * \return See enum RADIO_RX_STATUS for values.
  */
-RADIO_RX_STATUS Radio_Receive(radiopacket_t* buffer);
+RADIO_RX_STATUS Radio_Receive(const void* buffer);
 
 /**
  * Calculate the radio's transmit success rate over the last 16 packets.  The return value is the percentage of packets

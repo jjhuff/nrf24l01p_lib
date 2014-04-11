@@ -11,7 +11,6 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "nRF24L01.h"
-#include "packet.h"
 #include "spi.h"
 
 #include "radio.h"
@@ -21,18 +20,19 @@
 #define CHANNEL 112
 #define ADDRESS_LENGTH 5
 
-// Pin definitions for chip select and chip enable on the radio module
-#define CE_DDR        DDRB
-#define CE_PORT       PORTB
-#define CE_PIN        PORTB0
+// Pin definitions
+#define CE_DDR          DDRB
+#define CE_PORT         PORTB
+#define CE_PIN          PORTB0
 
-#define CSN_DDR       DDRB
-#define CSN_PORT      PORTB
-#define CSN_PIN       PORTB1
+#define CSN_DDR         DDRB
+#define CSN_PORT        PORTB
+#define CSN_PIN         PORTB1
 
-#define IRQ_DDR       DDRD
-#define IRQ_PORT      PORTD
-#define IRQ_PIN       PORTD6
+#define IRQ_DDR         DDRD
+#define IRQ_PORT        PORTD
+#define IRQ_PIN         PORTD6
+#define IRQ_VECTOR      PCINT2_vect
 
 // Definitions for selecting and enabling the radio
 #define CSN_HIGH()    CSN_PORT |=  1<<CSN_PIN;
@@ -172,8 +172,6 @@ static void set_tx_mode(void) {
         config &= ~(1<<PRIM_RX);
         set_register(CONFIG, &config, 1);
         // The radio takes 130 us to power up the transmitter
-        // You can delete this if you're sending large packets (I'm thinking > 25 bytes, but I'm not sure) because it
-        // sending the bytes over SPI can take this long.
         _delay_us(65);
         _delay_us(65);
     }
@@ -344,7 +342,7 @@ void Radio_Set_Tx_Addr(uint8_t* address) {
     set_register(TX_ADDR, address, ADDRESS_LENGTH);
 }
 
-uint8_t Radio_Transmit(radiopacket_t* payload, RADIO_TX_WAIT wait) {
+uint8_t Radio_Transmit(const void* payload, RADIO_TX_WAIT wait) {
     //if (block && transmit_lock) while (transmit_lock);
     //if (!block && transmit_lock) return 0;
     uint8_t len = 32;
@@ -375,7 +373,7 @@ uint8_t Radio_Transmit(radiopacket_t* payload, RADIO_TX_WAIT wait) {
     return RADIO_TX_SUCCESS;
 }
 
-RADIO_RX_STATUS Radio_Receive(radiopacket_t* buffer) {
+RADIO_RX_STATUS Radio_Receive(const void* buffer) {
     uint8_t len = 32;
     uint8_t status;
     uint8_t pipe_number;
@@ -452,7 +450,7 @@ void Radio_DumpStatus() {
 }
 
 // Interrupt handler
-ISR(PCINT2_vect) {
+ISR(IRQ_VECTOR) {
     uint8_t status;
     uint8_t pipe_number;
 

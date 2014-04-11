@@ -6,6 +6,7 @@
 #include <avr/wdt.h>
 #include <util/delay.h>
 #include "radio.h"
+#include "packet.h"
 
 #define BAUD 9600
 
