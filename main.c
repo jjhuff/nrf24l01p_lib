@@ -32,9 +32,7 @@ uint16_t tx_count = 0;
 int main(void)
 {
     UART_Init();
-    _delay_ms(100);
     Radio_Init();
-    _delay_ms(200);
     Radio_Configure(110, RADIO_250KBPS, RADIO_HIGH_POWER);
     Radio_Configure_Rx(RADIO_PIPE_0, address[0], ENABLE);
     Radio_Configure_Rx(RADIO_PIPE_1, address[2], ENABLE);

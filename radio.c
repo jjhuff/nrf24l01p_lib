@@ -118,29 +118,11 @@ static uint8_t get_register(radio_register_t reg, uint8_t* buffer, uint8_t len) 
 /**
  * Send an instruction to the nRF24L01.
  * \param instruction The instruction to send (see the bottom of nRF24L01.h)
- * \param write_buf An array of argument data to the instruction.  If len is 0, then this may be NULL.
- * \param read_buf An array for the instruction's return data.  This can be NULL if the instruction has no output.
- * \param len The length of the data and buffer arrays.
  */
-static void send_instruction(uint8_t instruction, const uint8_t* write_buf, uint8_t* read_buf, uint8_t len) {
+static void send_instruction_simple(uint8_t instruction) {
     CSN_LOW();
     // send the instruction
     send_spi(instruction);
-    // pass in args
-    if (len > 0) {
-        if (read_buf == NULL) {
-            // We're writing
-            for (uint8_t i = 0; i < len; i++) {
-                send_spi(write_buf[i]);
-            }
-        } else {
-            // We're reading
-            for (uint8_t i = 0; i < len; i++) {
-                read_buf[i] = send_spi(0x00);
-            }
-        }
-    }
-    // resynch SPI
     CSN_HIGH();
 }
 
@@ -154,8 +136,7 @@ static void set_rx_mode(void) {
         config |= (1<<PRIM_RX);
         set_register(CONFIG, &config, 1);
         // the radio takes 130 us to power up the receiver.
-        _delay_us(65);
-        _delay_us(65);
+        _delay_us(130);
     }
 }
 
@@ -169,8 +150,7 @@ static void set_tx_mode(void) {
         config &= ~(1<<PRIM_RX);
         set_register(CONFIG, &config, 1);
         // The radio takes 130 us to power up the transmitter
-        _delay_us(65);
-        _delay_us(65);
+        _delay_us(130);
     }
 }
 
@@ -188,34 +168,7 @@ static void reset_pipe0_address(void) {
 
 /**
  * Configure radio defaults and turn on the radio in receive mode.
- * This configures the radio to its max-power, max-packet-header-length settings.  If you want to reduce power consumption
- * or increase on-air payload bandwidth, you'll have to change the config.
  */
-static void configure_registers(void) {
-    uint8_t value;
-
-    // set address width to 5 bytes.
-    value = ADDRESS_LENGTH - 2;            // 0b11 for 5 bytes, 0b10 for 4 bytes, 0b01 for 3 bytes
-    set_register(SETUP_AW, &value, 1);
-
-    // set Enhanced Shockburst retry to every 586 us, up to 5 times.  If packet collisions are a problem even with AA enabled,
-    // then consider changing the retry delay to be different on the different stations so that they do not keep colliding on each retry.
-    value = 0xFF;
-    set_register(SETUP_RETR, &value, 1);
-
-
-    // Enable 2-byte CRC and power up in receive mode.
-    value = (1<<EN_CRC) | (1<<CRCO) | (1<<PWR_UP) | (1<<PRIM_RX);
-    set_register(CONFIG, &value, 1);
-
-    // clear the interrupt flags in case the radio's still asserting an old unhandled interrupt
-    value = (1<<RX_DR) | (1<<TX_DS) | (1<<MAX_RT);
-    set_register(STATUS, &value, 1);
-
-    // flush the FIFOs in case there are old data in them.
-    Radio_Flush();
-}
-
 void Radio_Init() {
     transmit_lock = 0;
 
@@ -229,17 +182,34 @@ void Radio_Init() {
     CE_DDR |= 1<<CE_PIN;
     CSN_DDR |= 1<<CSN_PIN;
 
+    // A 10.3 ms delay is required between power off and power on states (controlled by 3.3 V supply).
+    _delay_ms(11);
+
+    uint8_t value;
+
+    // set address width to 5 bytes.
+    value = ADDRESS_LENGTH - 2;            // 0b11 for 5 bytes, 0b10 for 4 bytes, 0b01 for 3 bytes
+    set_register(SETUP_AW, &value, 1);
+
+    // set Enhanced Shockburst retry to every 586 us, up to 5 times.
+    value = 0xFF;
+    set_register(SETUP_RETR, &value, 1);
+
+    // Enable 2-byte CRC and power up in receive mode.
+    value = (1<<EN_CRC) | (1<<CRCO) | (1<<PWR_UP) | (1<<PRIM_RX);
+    set_register(CONFIG, &value, 1);
+
+    // flush the FIFOs in case there are old data in them.
+    Radio_Flush();
+
+    // clear the interrupt flags in case the radio's still asserting an old unhandled interrupt
+    value = (1<<RX_DR) | (1<<TX_DS) | (1<<MAX_RT);
+    set_register(STATUS, &value, 1);
+
     // Enable radio interrupt.  This interrupt is triggered when data are received and when a transmission completes.
     IRQ_DDR &= ~(1<<IRQ_PIN);
     PCMSK2 |= (1<<PCINT22);
     PCICR  |= (1<<PCIE2);
-
-
-    // A 10.3 ms delay is required between power off and power on states (controlled by 3.3 V supply).
-    _delay_ms(11);
-
-    // Configure the radio registers that are not application-dependent.
-    configure_registers();
 
     // A 1.5 ms delay is required between power down and power up states (controlled by PWR_UP bit in CONFIG)
     _delay_ms(2);
@@ -355,7 +325,12 @@ uint8_t Radio_Transmit(const void* payload, RADIO_TX_WAIT wait) {
     set_register(RX_ADDR_P0, (uint8_t*)tx_address, ADDRESS_LENGTH);
 
     // transfer the packet to the radio's Tx FIFO for transmission
-    send_instruction(W_TX_PAYLOAD, (uint8_t*)payload, NULL, len);
+    CSN_LOW();
+    send_spi(W_TX_PAYLOAD);
+    for (uint8_t i = 0; i < len; i++) {
+        send_spi(((uint8_t*)payload)[i]);
+    }
+    CSN_HIGH();
 
     // start the transmission.
     CE_HIGH();
@@ -395,8 +370,14 @@ RADIO_RX_STATUS Radio_Receive(const void* buffer) {
 
     if (doMove) {
         // Move the data payload into the local
-        send_instruction(R_RX_PAYLOAD, NULL, (uint8_t*)buffer, rx_pipe_widths[pipe_number]);
-
+        //send_instruction(R_RX_PAYLOAD, NULL, (uint8_t*)buffer, rx_pipe_widths[pipe_number]);
+        CSN_LOW();
+        send_spi(R_RX_PAYLOAD);
+        uint8_t len = rx_pipe_widths[pipe_number];
+        for (uint8_t i = 0; i < len; i++) {
+            ((uint8_t*)buffer)[i] = send_spi(0x00);
+        }
+        CSN_HIGH();
         status = get_status();
         pipe_number =  (status & 0xE) >> 1;
 
@@ -414,8 +395,8 @@ RADIO_RX_STATUS Radio_Receive(const void* buffer) {
 }
 
 void Radio_Flush() {
-    send_instruction(FLUSH_TX, NULL, NULL, 0);
-    send_instruction(FLUSH_RX, NULL, NULL, 0);
+    send_instruction_simple(FLUSH_TX);
+    send_instruction_simple(FLUSH_RX);
 }
 
 void Radio_DumpStatus() {
@@ -450,7 +431,7 @@ ISR(IRQ_VECTOR) {
         tx_last_status = RADIO_TX_SUCCESS;
         transmit_lock = 0;
     } else if (status & (1<<MAX_RT)) {
-        send_instruction(FLUSH_TX, NULL, NULL, 0);
+        send_instruction_simple(FLUSH_TX);
         reset_pipe0_address();
         set_rx_mode();
         tx_last_status = RADIO_TX_MAX_RT;
