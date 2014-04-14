@@ -84,7 +84,7 @@ void Radio_Init(void);
  *         pipes 2-5 share the four most significant bytes of pipe 1's address.  The LSB of each pipe's address must be unique.
  *         For example:
  *                 Pipe 0: 0x0123456789
- *                 Pipe 1:    0x9876543210
+ *                 Pipe 1: 0x9876543210
  *                 Pipe 2: 0x98765432AB
  *                 Pipe 3: 0x98765432BC
  *                 Pipe 4: 0x98765432CD
@@ -103,20 +103,21 @@ void Radio_Init(void);
  *                 ...
  * \param enable Enable or disable the pipe.
  */
-void Radio_Configure_Rx(RADIO_PIPE pipe, uint8_t* address, ON_OFF enable);
+void Radio_Configure_Rx(RADIO_PIPE pipe, const uint8_t* address, ON_OFF enable);
 
 /**
  * Configure the radio transceiver.
+ * \param channel The RF channel number (0-125)
  * \param dr The data rate at which the radio will transmit and receive data (1 Mbps or 2 Mbps).
  * \param power The transmitter's power output.
  */
-void Radio_Configure(RADIO_DATA_RATE dr, RADIO_TX_POWER power);
+void Radio_Configure(uint8_t channel, RADIO_DATA_RATE dr, RADIO_TX_POWER power);
 
 /**
  * Set the radio transmitter's address.
  * \param The 5-byte address that packets will be sent to.
  */
-void Radio_Set_Tx_Addr(uint8_t* address);
+void Radio_Set_Tx_Addr(const uint8_t* address);
 
 /**
  * Transmit some data to another station.
