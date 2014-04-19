@@ -64,6 +64,7 @@ static uint8_t get_status(void) {
     return status;
 }
 
+
 /**
  * Set a register in the radio
  * \param reg The register value defined in nRF24L01.h (e.g. CONFIG, EN_AA, &c.).
@@ -93,11 +94,6 @@ static uint8_t set_register(radio_register_t reg, const uint8_t* value, uint8_t 
  * \param len The length of the buffer.
  */
 static uint8_t get_register(radio_register_t reg, uint8_t* buffer, uint8_t len) {
-    // If the buffer is too long for the register results, then the radio will interpret the extra bytes as instructions.
-    // To remove the risk, we set the buffer elements to NOP instructions.
-    for (uint8_t i = 0; i < len; i++) {
-        buffer[i] = 0xFF;
-    }
     CSN_LOW();
 
     uint8_t status = send_spi(R_REGISTER | (REGISTER_MASK & reg));
@@ -116,7 +112,6 @@ static uint8_t get_register(radio_register_t reg, uint8_t* buffer, uint8_t len) 
  */
 static void send_instruction_simple(uint8_t instruction) {
     CSN_LOW();
-    // send the instruction
     send_spi(instruction);
     CSN_HIGH();
 }
@@ -334,9 +329,8 @@ uint8_t Radio_Transmit(const void* payload, RADIO_TX_WAIT wait) {
     return RADIO_TX_SUCCESS;
 }
 
-RADIO_RX_STATUS Radio_Receive(const void* buffer, uint8_t buffer_len) {
-    uint8_t doMove = 1;
-    RADIO_RX_STATUS result;
+uint8_t Radio_Receive(const void* buffer, uint8_t buffer_len) {
+    uint8_t len = 0;
 
     transmit_lock = 0;
 
@@ -345,42 +339,32 @@ RADIO_RX_STATUS Radio_Receive(const void* buffer, uint8_t buffer_len) {
     uint8_t status = get_status();
     uint8_t pipe_number =  (status & 0xE) >> 1;
 
-    if (pipe_number == PIPE_EMPTY) {
-        result = RADIO_RX_FIFO_EMPTY;
-    } else  {
+    if (pipe_number != PIPE_EMPTY) {
         // Read the payload length
         CSN_LOW();
         send_spi(R_RX_PL_WID);
-        uint8_t len = send_spi(0x00);
+        len = send_spi(0x00);
         CSN_HIGH();
 
-        if (buffer_len <= len) {
-            // Move the data payload to the local buffer
-            CSN_LOW();
-            send_spi(R_RX_PAYLOAD);
-            for (uint8_t i = 0; i < len; i++) {
-                ((uint8_t*)buffer)[i] = send_spi(0x00);
-            }
-            CSN_HIGH();
-
-            // See if there's any more packets
-            status = get_status();
-            pipe_number =  (status & 0xE) >> 1;
-            if (pipe_number != PIPE_EMPTY)
-                result = RADIO_RX_MORE_PACKETS;
-            else
-                result = RADIO_RX_SUCCESS;
-        } else {
-            // the buffer isn't big enough, so don't copy the data.
-            result = RADIO_RX_INVALID_ARGS;
+        // Clamp the packet length to the buffer length
+        if(len<buffer_len) {
+            len = buffer_len;
         }
+
+        // Move the data payload to the buffer
+        CSN_LOW();
+        send_spi(R_RX_PAYLOAD);
+        for (uint8_t i = 0; i < len; i++) {
+            ((uint8_t*)buffer)[i] = send_spi(0x00);
+        }
+        CSN_HIGH();
     }
 
     CE_HIGH();
 
     transmit_lock = 0;
 
-    return result;
+    return len;
 }
 
 void Radio_Flush() {

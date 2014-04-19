@@ -109,10 +109,13 @@ int main(void)
 char led_toggler = 0;
 void radio_rxhandler(uint8_t pipenumber) {
     radiopacket_t pkt;
-    uint8_t ret = RADIO_RX_MORE_PACKETS;
-    while(ret == RADIO_RX_MORE_PACKETS) {
+    uint8_t len;
+    while(1) {
         pkt.timestamp = 0xFF;
-        ret=Radio_Receive(&pkt, sizeof(pkt));
+        len=Radio_Receive(&pkt, sizeof(pkt));
+        if (len == 0) {
+            break;
+        }
         printf("RX: %d %d\n", pipenumber, pkt.timestamp);
         led_toggler = !led_toggler;
         if (led_toggler) {

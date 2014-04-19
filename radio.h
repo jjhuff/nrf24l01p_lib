@@ -118,11 +118,12 @@ uint8_t Radio_Transmit(const void* payload, RADIO_TX_WAIT wait);
 
 /**
  * Get the next packet from the Rx FIFO.
- * \param payload If there is a packet to copy out of the Rx FIFO, then its payload will be placed in this structure.
+ * \param buffer If there is a packet to copy out of the Rx FIFO, then its payload will be placed in this structure.
  *         If the FIFO is empty, then this structure will be left alone.
- * \return See enum RADIO_RX_STATUS for values.
+ * \param buffer_len Length of buffer
+ * \return Number of bytes read (0 means no packet was ready)
  */
-RADIO_RX_STATUS Radio_Receive(const void* buffer, uint8_t buffer_len);
+uint8_t Radio_Receive(const void* buffer, uint8_t buffer_len);
 
 /**
  * Calculate the radio's transmit success rate over the last 16 packets.  The return value is the percentage of packets
