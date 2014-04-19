@@ -63,7 +63,7 @@ int main(void)
                 while(1); //Wait for WTD to timeout
                 break;
             case 's':
-                Radio_DumpStatus();
+                //Radio_DumpStatus();
                 mode = 0;
                 break;
             case 'a':
