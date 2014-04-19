@@ -40,9 +40,6 @@
 // Flag which denotes that the radio is currently transmitting
 static volatile uint8_t transmit_lock;
 
-// tracks the payload widths of the Rx pipes
-static volatile uint8_t rx_pipe_widths[6] = {32, 32, 0, 0, 0, 0};
-
 // holds the transmit address (Rx pipe 0 is set to this address when transmitting with auto-ack enabled).
 static volatile uint8_t tx_address[5] = { 0xe7, 0xe7, 0xe7, 0xe7, 0xe7 };
 
@@ -158,10 +155,7 @@ static void set_tx_mode(void) {
  * auto-ack packets).
  */
 static void reset_pipe0_address(void) {
-    if (rx_pipe_widths[0] != 0) {
-        // reset the pipe 0 address if pipe 0 is enabled.
-        set_register(RX_ADDR_P0, (uint8_t*)rx_pipe0_address, ADDRESS_LENGTH);
-    }
+    set_register(RX_ADDR_P0, (uint8_t*)rx_pipe0_address, ADDRESS_LENGTH);
 }
 
 /**
@@ -188,6 +182,12 @@ void Radio_Init() {
     // set address width to 5 bytes.
     value = ADDRESS_LENGTH - 2;            // 0b11 for 5 bytes, 0b10 for 4 bytes, 0b01 for 3 bytes
     set_register(SETUP_AW, &value, 1);
+
+    // Enable dynamic packet length support
+    value = 1<<EN_DPL;
+    set_register(FEATURE, &value, 1);
+    value = 0x3F;
+    set_register(DYNPD, &value, 1);
 
     // set Enhanced Shockburst retry to every 586 us, up to 5 times.
     value = 0xFF;
@@ -254,8 +254,6 @@ void Radio_Configure(uint8_t channel, RADIO_DATA_RATE dr, RADIO_TX_POWER power) 
 void Radio_Configure_Rx(uint8_t pipe, const uint8_t* address, uint8_t enable) {
     uint8_t value;
     uint8_t use_aa = 1;
-    uint8_t payload_width = 32;
-    if (payload_width < 1 || payload_width > 32 || pipe > 5) return;
 
     // store the pipe 0 address so that it can be overwritten when transmitting with auto-ack enabled.
     if (pipe == 0) {
@@ -278,11 +276,6 @@ void Radio_Configure_Rx(uint8_t pipe, const uint8_t* address, uint8_t enable) {
         value &= ~(1<<pipe);
     }
     set_register(EN_AA, &value, 1);
-
-    // Set the pipe's payload width.  If the pipe is being disabled, then the payload width is set to 0.
-    value = enable ? payload_width : 0;
-    set_register(RX_PW_P0 + pipe, &value, 1);
-    rx_pipe_widths[pipe] = value;
 
     // Enable or disable the pipe.
     get_register(EN_RXADDR, &value, 1);
@@ -341,10 +334,7 @@ uint8_t Radio_Transmit(const void* payload, RADIO_TX_WAIT wait) {
     return RADIO_TX_SUCCESS;
 }
 
-RADIO_RX_STATUS Radio_Receive(const void* buffer) {
-    uint8_t len = 32;
-    uint8_t status;
-    uint8_t pipe_number;
+RADIO_RX_STATUS Radio_Receive(const void* buffer, uint8_t buffer_len) {
     uint8_t doMove = 1;
     RADIO_RX_STATUS result;
 
@@ -352,37 +342,38 @@ RADIO_RX_STATUS Radio_Receive(const void* buffer) {
 
     CE_LOW();
 
-    status = get_status();
-    pipe_number =  (status & 0xE) >> 1;
+    uint8_t status = get_status();
+    uint8_t pipe_number =  (status & 0xE) >> 1;
 
     if (pipe_number == PIPE_EMPTY) {
         result = RADIO_RX_FIFO_EMPTY;
-        doMove = 0;
-    }
-
-    if (rx_pipe_widths[pipe_number] > len) {
-        // the buffer isn't big enough, so don't copy the data.
-        result = RADIO_RX_INVALID_ARGS;
-        doMove = 0;
-    }
-
-    if (doMove) {
-        // Move the data payload into the local
-        //send_instruction(R_RX_PAYLOAD, NULL, (uint8_t*)buffer, rx_pipe_widths[pipe_number]);
+    } else  {
+        // Read the payload length
         CSN_LOW();
-        send_spi(R_RX_PAYLOAD);
-        uint8_t len = rx_pipe_widths[pipe_number];
-        for (uint8_t i = 0; i < len; i++) {
-            ((uint8_t*)buffer)[i] = send_spi(0x00);
-        }
+        send_spi(R_RX_PL_WID);
+        uint8_t len = send_spi(0x00);
         CSN_HIGH();
-        status = get_status();
-        pipe_number =  (status & 0xE) >> 1;
 
-        if (pipe_number != PIPE_EMPTY)
-            result = RADIO_RX_MORE_PACKETS;
-        else
-            result = RADIO_RX_SUCCESS;
+        if (buffer_len <= len) {
+            // Move the data payload to the local buffer
+            CSN_LOW();
+            send_spi(R_RX_PAYLOAD);
+            for (uint8_t i = 0; i < len; i++) {
+                ((uint8_t*)buffer)[i] = send_spi(0x00);
+            }
+            CSN_HIGH();
+
+            // See if there's any more packets
+            status = get_status();
+            pipe_number =  (status & 0xE) >> 1;
+            if (pipe_number != PIPE_EMPTY)
+                result = RADIO_RX_MORE_PACKETS;
+            else
+                result = RADIO_RX_SUCCESS;
+        } else {
+            // the buffer isn't big enough, so don't copy the data.
+            result = RADIO_RX_INVALID_ARGS;
+        }
     }
 
     CE_HIGH();

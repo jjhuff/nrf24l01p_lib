@@ -122,7 +122,7 @@ uint8_t Radio_Transmit(const void* payload, RADIO_TX_WAIT wait);
  *         If the FIFO is empty, then this structure will be left alone.
  * \return See enum RADIO_RX_STATUS for values.
  */
-RADIO_RX_STATUS Radio_Receive(const void* buffer);
+RADIO_RX_STATUS Radio_Receive(const void* buffer, uint8_t buffer_len);
 
 /**
  * Calculate the radio's transmit success rate over the last 16 packets.  The return value is the percentage of packets

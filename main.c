@@ -112,7 +112,7 @@ void radio_rxhandler(uint8_t pipenumber) {
     uint8_t ret = RADIO_RX_MORE_PACKETS;
     while(ret == RADIO_RX_MORE_PACKETS) {
         pkt.timestamp = 0xFF;
-        ret=Radio_Receive(&pkt);
+        ret=Radio_Receive(&pkt, sizeof(pkt));
         printf("RX: %d %d\n", pipenumber, pkt.timestamp);
         led_toggler = !led_toggler;
         if (led_toggler) {

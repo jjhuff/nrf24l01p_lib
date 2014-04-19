@@ -67,6 +67,8 @@ typedef uint8_t radio_register_t;
 /// Auto-retransmit status (cf. REUSE_TX_PL instruction), Tx FIFO full/empty, Rx FIFO full/empty
 /// (The Rx FIFO is a 3-packet queue shared by all six pipes)
 #define FIFO_STATUS 0x17
+#define DYNPD       0x1C
+#define FEATURE     0x1D
 
 
 /*****                            Register Bit Mask Shift Values (use with _BV())                            *****/
@@ -189,11 +191,18 @@ typedef uint8_t radio_register_t;
 /// 0 - The Rx FIFO is not empty.  1 - The Rx FIFO is empty.
 #define RX_FIFO_EMPTY    0
 
+
+/// FEATURE register
+// Enable dynamic payload length
+#define EN_DPL           2
+
 /*****                                        Instructions                                        *****/
 /// Read Register
 #define R_REGISTER    0x00
 /// Write Register
 #define W_REGISTER    0x20
+/// Read the payload length
+#define R_RX_PL_WID   0x60
 /// Read receive payload (clears FIFO; LSByte first)
 #define R_RX_PAYLOAD  0x61
 /// Write transmit payload
@@ -204,17 +213,9 @@ typedef uint8_t radio_register_t;
 #define FLUSH_RX      0xE2
 /// Reuse transmit payload.  Use this to continuously retransmit the payload (in Tx mode) as long as CE is held high, until
 /// the Tx FIFO is flushed or the payload is overwritten.  This should not be changed while transmitting.  This is different
-typedef enum _radio_pipe {
-    RADIO_PIPE_0 = 0,
-    RADIO_PIPE_1 = 1,
-    RADIO_PIPE_2 = 2,
-    RADIO_PIPE_3 = 3,
-    RADIO_PIPE_4 = 4,
-    RADIO_PIPE_5 = 5,
-    RADIO_PIPE_EMPTY = 7,    // FIFO is empty when pipe number bits in status register are 0b111.
-} RADIO_PIPE;
 /// from Enhanced Shockburst.
 #define REUSE_TX_PL   0xE3
+
 /// No operation.
 #define NOP           0xFF
 
