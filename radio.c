@@ -54,13 +54,9 @@ extern void radio_rxhandler(uint8_t pipenumber);
  * Retrieve the status register.
  */
 static uint8_t get_status(void) {
-    uint8_t status = 0;
     CSN_LOW();
-
-    status = send_spi(NOP);
-
+    uint8_t status = send_spi(NOP);
     CSN_HIGH();
-
     return status;
 }
 
@@ -72,17 +68,12 @@ static uint8_t get_status(void) {
  * \return The status register.
  */
 static uint8_t set_register(radio_register_t reg, const uint8_t* value, uint8_t len) {
-    uint8_t status;
     CSN_LOW();
-
-    status = send_spi(W_REGISTER | (REGISTER_MASK & reg));
-
+    uint8_t status = send_spi(W_REGISTER | (REGISTER_MASK & reg));
     for (uint8_t i = 0; i < len; i++) {
         send_spi(value[i]);
     }
-
     CSN_HIGH();
-
     return status;
 }
 
@@ -95,14 +86,11 @@ static uint8_t set_register(radio_register_t reg, const uint8_t* value, uint8_t 
  */
 static uint8_t get_register(radio_register_t reg, uint8_t* buffer, uint8_t len) {
     CSN_LOW();
-
     uint8_t status = send_spi(R_REGISTER | (REGISTER_MASK & reg));
     for (uint8_t i = 0; i < len; i++) {
         buffer[i] = send_spi(0);
     }
-
     CSN_HIGH();
-
     return status;
 }
 
@@ -181,7 +169,7 @@ void Radio_Init() {
     // Enable dynamic packet length support
     value = 1<<EN_DPL;
     set_register(FEATURE, &value, 1);
-    value = 0x3F;
+    value = 0x3F; // Enable for all pipes
     set_register(DYNPD, &value, 1);
 
     // set Enhanced Shockburst retry to every 586 us, up to 5 times.
@@ -293,10 +281,8 @@ void Radio_Set_Tx_Addr(const uint8_t* address) {
     set_register(TX_ADDR, address, ADDRESS_LENGTH);
 }
 
-uint8_t Radio_Transmit(const void* payload, RADIO_TX_WAIT wait) {
-    //if (block && transmit_lock) while (transmit_lock);
-    //if (!block && transmit_lock) return 0;
-    uint8_t len = 32;
+void Radio_Transmit(const void* payload, uint8_t len) {
+    Radio_Transmit_Wait();
 
     // indicate that the driver is transmitting.
     transmit_lock = 1;
@@ -321,21 +307,18 @@ uint8_t Radio_Transmit(const void* payload, RADIO_TX_WAIT wait) {
     // start the transmission.
     CE_HIGH();
 
-    if (wait == RADIO_WAIT_FOR_TX) {
-        while (transmit_lock);
-        return tx_last_status;
-    }
-
-    return RADIO_TX_SUCCESS;
 }
 
+uint8_t Radio_Transmit_Wait() {
+    while (transmit_lock) {}
+    return tx_last_status;
+}
+
+
 uint8_t Radio_Receive(const void* buffer, uint8_t buffer_len) {
-    uint8_t len = 0;
-
-    transmit_lock = 0;
-
     CE_LOW();
 
+    uint8_t len = 0;
     uint8_t status = get_status();
     uint8_t pipe_number =  (status & 0xE) >> 1;
 
@@ -343,7 +326,7 @@ uint8_t Radio_Receive(const void* buffer, uint8_t buffer_len) {
         // Read the payload length
         CSN_LOW();
         send_spi(R_RX_PL_WID);
-        len = send_spi(0x00);
+        len = send_spi(0);
         CSN_HIGH();
 
         // Clamp the packet length to the buffer length
@@ -355,15 +338,12 @@ uint8_t Radio_Receive(const void* buffer, uint8_t buffer_len) {
         CSN_LOW();
         send_spi(R_RX_PAYLOAD);
         for (uint8_t i = 0; i < len; i++) {
-            ((uint8_t*)buffer)[i] = send_spi(0x00);
+            ((uint8_t*)buffer)[i] = send_spi(0);
         }
         CSN_HIGH();
     }
 
     CE_HIGH();
-
-    transmit_lock = 0;
-
     return len;
 }
 

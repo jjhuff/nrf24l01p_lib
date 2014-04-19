@@ -30,28 +30,10 @@ typedef enum _radio_dr {
     RADIO_2MBPS = 2,
 } RADIO_DATA_RATE;
 
-typedef enum _radio_receive {
-    RADIO_RX_INVALID_ARGS,        // one of the arguments to Radio_Receive was invalid
-    RADIO_RX_TRANSMITTING,        // the radio was transmitting
-    RADIO_RX_FIFO_EMPTY,        // there aren't any packets in the Rx FIFO to receive (Radio_Receive does not receive data)
-    RADIO_RX_MORE_PACKETS,        // after copying out the head of the Rx FIFO, there is still another packet in the FIFO.
-    RADIO_RX_SUCCESS,            // there was a packet to receive, it was successfully received, and the Rx FIFO is now empty.
-} RADIO_RX_STATUS;
-
 typedef enum _radio_transmit {
     RADIO_TX_MAX_RT,
     RADIO_TX_SUCCESS,
 } RADIO_TX_STATUS;
-
-typedef enum _radio_tx_wait {
-    RADIO_WAIT_FOR_TX,
-    RADIO_RETURN_ON_TX,
-} RADIO_TX_WAIT;
-
-typedef enum _radio_ack {
-    RADIO_ACK,
-    RADIO_NO_ACK,
-} RADIO_USE_ACK;
 
 void Radio_Init(void);
 
@@ -104,17 +86,14 @@ void Radio_Set_Tx_Addr(const uint8_t* address);
 /**
  * Transmit some data to another station.
  * \param payload The data packet to transmit.
- * \param wait If this is RADIO_WAIT, then Radio_Transmit will not return until the transmission is completed
- *         successfully or fails.  If this is RADIO_DO_NOT_WAIT then Radio_Transmit will return as soon as the
- *         payload is loaded onto the radio and the transmission is started (in this case, Radio_Is_Transmitting
- *         can be used to determine if the radio is busy).
- * \return If wait was RADIO_DO_NOT_WAIT, then Radio_Transmit always returns RADIO_TX_SUCCESS.  If wait was
- *         RADIO_WAIT and the transmission was successful (TX_DS interrupt asserted, i.e. the ack packet was
- *         received), Radio_Transmit returns RADIO_TX_SUCCESS.  If wait was RADIO_WAIT and the transmission failed
- *         (MAX_RT interrupt asserted, i.e. no ack was received and the maximum number of retries were sent), then
- *         Radio_Transmit returns RADIO_TX_MAX_RT.
+ * \param len Length of the payload
  */
-uint8_t Radio_Transmit(const void* payload, RADIO_TX_WAIT wait);
+void Radio_Transmit(const void* payload, uint8_t len);
+
+/**
+ * Wait for the current TX to be complete
+ */
+uint8_t Radio_Transmit_Wait(void);
 
 /**
  * Get the next packet from the Rx FIFO.
@@ -124,12 +103,6 @@ uint8_t Radio_Transmit(const void* payload, RADIO_TX_WAIT wait);
  * \return Number of bytes read (0 means no packet was ready)
  */
 uint8_t Radio_Receive(const void* buffer, uint8_t buffer_len);
-
-/**
- * Calculate the radio's transmit success rate over the last 16 packets.  The return value is the percentage of packets
- * that were transmitted successfully, ranging from 0 to 100.
- */
-uint8_t Radio_Success_Rate(void);
 
 /**
  * Flush the radio's Rx and Tx FIFOs.

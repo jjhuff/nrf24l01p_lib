@@ -72,7 +72,7 @@ int main(void)
                 pkt.timestamp = (tx_count++);
                 printf("TX 0: %d\n", pkt.timestamp);
                 Radio_Set_Tx_Addr(address[0]);
-                Radio_Transmit(&pkt, RADIO_RETURN_ON_TX);
+                Radio_Transmit(&pkt, sizeof(pkt));
                 _delay_ms(250);
                 break;
             case 'b':
@@ -81,7 +81,7 @@ int main(void)
                 pkt.timestamp = (tx_count++);
                 printf("TX 1: %d\n", pkt.timestamp);
                 Radio_Set_Tx_Addr(address[1]);
-                Radio_Transmit(&pkt, RADIO_RETURN_ON_TX);
+                Radio_Transmit(&pkt, sizeof(pkt));
                 _delay_ms(250);
                 break;
             case 'c':
@@ -90,7 +90,7 @@ int main(void)
                 pkt.timestamp = (tx_count++);
                 printf("TX 2: %d\n", pkt.timestamp);
                 Radio_Set_Tx_Addr(address[2]);
-                Radio_Transmit(&pkt, RADIO_RETURN_ON_TX);
+                Radio_Transmit(&pkt, sizeof(pkt));
                 _delay_ms(250);
                 break;
             case '0':
