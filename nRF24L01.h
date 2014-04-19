@@ -163,6 +163,7 @@ typedef uint8_t radio_register_t;
 #define RX_P_NO     1
 /// 0 - There are available locations in the Tx FIFO.  1 - The Tx FIFO is full.
 #define TX_FULL     0
+#define PIPE_EMPTY  0x07
 
 /// OBSERVE_TX Register
 /// Lost packet count (bits 7:4)
@@ -203,6 +204,15 @@ typedef uint8_t radio_register_t;
 #define FLUSH_RX      0xE2
 /// Reuse transmit payload.  Use this to continuously retransmit the payload (in Tx mode) as long as CE is held high, until
 /// the Tx FIFO is flushed or the payload is overwritten.  This should not be changed while transmitting.  This is different
+typedef enum _radio_pipe {
+    RADIO_PIPE_0 = 0,
+    RADIO_PIPE_1 = 1,
+    RADIO_PIPE_2 = 2,
+    RADIO_PIPE_3 = 3,
+    RADIO_PIPE_4 = 4,
+    RADIO_PIPE_5 = 5,
+    RADIO_PIPE_EMPTY = 7,    // FIFO is empty when pipe number bits in status register are 0b111.
+} RADIO_PIPE;
 /// from Enhanced Shockburst.
 #define REUSE_TX_PL   0xE3
 /// No operation.

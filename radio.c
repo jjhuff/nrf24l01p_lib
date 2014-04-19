@@ -4,9 +4,7 @@
  *  Created on: 24-Jan-2009
  *      Author: Neil MacMillan
  */
-#include <stddef.h>
 #include <stdio.h>
-#include <string.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -160,7 +158,7 @@ static void set_tx_mode(void) {
  * auto-ack packets).
  */
 static void reset_pipe0_address(void) {
-    if (rx_pipe_widths[RADIO_PIPE_0] != 0) {
+    if (rx_pipe_widths[0] != 0) {
         // reset the pipe 0 address if pipe 0 is enabled.
         set_register(RX_ADDR_P0, (uint8_t*)rx_pipe0_address, ADDRESS_LENGTH);
     }
@@ -253,14 +251,14 @@ void Radio_Configure(uint8_t channel, RADIO_DATA_RATE dr, RADIO_TX_POWER power) 
 // default address for pipe 3 is 0xc2c2c2c2c4 (disabled)
 // default address for pipe 4 is 0xc2c2c2c2c5 (disabled)
 // default address for pipe 5 is 0xc2c2c2c2c6 (disabled)
-void Radio_Configure_Rx(RADIO_PIPE pipe, const uint8_t* address, uint8_t enable) {
+void Radio_Configure_Rx(uint8_t pipe, const uint8_t* address, uint8_t enable) {
     uint8_t value;
     uint8_t use_aa = 1;
     uint8_t payload_width = 32;
-    if (payload_width < 1 || payload_width > 32 || pipe < RADIO_PIPE_0 || pipe > RADIO_PIPE_5) return;
+    if (payload_width < 1 || payload_width > 32 || pipe > 5) return;
 
     // store the pipe 0 address so that it can be overwritten when transmitting with auto-ack enabled.
-    if (pipe == RADIO_PIPE_0) {
+    if (pipe == 0) {
         rx_pipe0_address[0] = address[0];
         rx_pipe0_address[1] = address[1];
         rx_pipe0_address[2] = address[2];
@@ -270,7 +268,7 @@ void Radio_Configure_Rx(RADIO_PIPE pipe, const uint8_t* address, uint8_t enable)
 
     // Set the address.  We set this stuff even if the pipe is being disabled, because for example the transmitter
     // needs pipe 0 to have the same address as the Tx address for auto-ack to work, even if pipe 0 is disabled.
-    set_register(RX_ADDR_P0 + pipe, address, pipe > RADIO_PIPE_1 ? 1 : ADDRESS_LENGTH);
+    set_register(RX_ADDR_P0 + pipe, address, pipe > 1 ? 1 : ADDRESS_LENGTH);
 
     // Set auto-ack.
     get_register(EN_AA, &value, 1);
@@ -357,7 +355,7 @@ RADIO_RX_STATUS Radio_Receive(const void* buffer) {
     status = get_status();
     pipe_number =  (status & 0xE) >> 1;
 
-    if (pipe_number == RADIO_PIPE_EMPTY) {
+    if (pipe_number == PIPE_EMPTY) {
         result = RADIO_RX_FIFO_EMPTY;
         doMove = 0;
     }
@@ -381,7 +379,7 @@ RADIO_RX_STATUS Radio_Receive(const void* buffer) {
         status = get_status();
         pipe_number =  (status & 0xE) >> 1;
 
-        if (pipe_number != RADIO_PIPE_EMPTY)
+        if (pipe_number != PIPE_EMPTY)
             result = RADIO_RX_MORE_PACKETS;
         else
             result = RADIO_RX_SUCCESS;

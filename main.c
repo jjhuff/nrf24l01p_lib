@@ -34,8 +34,8 @@ int main(void)
     UART_Init();
     Radio_Init();
     Radio_Configure(110, RADIO_250KBPS, RADIO_HIGH_POWER);
-    Radio_Configure_Rx(RADIO_PIPE_0, address[0], ENABLE);
-    Radio_Configure_Rx(RADIO_PIPE_1, address[2], ENABLE);
+    Radio_Configure_Rx(0, address[0], 1);
+    Radio_Configure_Rx(1, address[2], 1);
 
     //setup LED
     DDRD |= 1<<PORTD2;
@@ -94,11 +94,11 @@ int main(void)
                 _delay_ms(250);
                 break;
             case '0':
-                Radio_Configure_Rx(RADIO_PIPE_0, address[0], ENABLE);
+                Radio_Configure_Rx(0, address[0], 1);
                 mode = 0;
                 break;
             case '1':
-                Radio_Configure_Rx(RADIO_PIPE_0, address[1], ENABLE);
+                Radio_Configure_Rx(0, address[1], 1);
                 mode = 0;
                 break;
             default:
