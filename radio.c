@@ -329,7 +329,7 @@ uint8_t Radio_Receive(const void* buffer, uint8_t buffer_len) {
         CSN_HIGH();
 
         // Clamp the packet length to the buffer length
-        if(len<buffer_len) {
+        if(len>buffer_len) {
             len = buffer_len;
         }
 
