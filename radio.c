@@ -22,10 +22,10 @@
 #define CE_PORT         PORTB
 #define CE_PIN          PORTB1
 
-#define IRQ_DDR         DDRD
-#define IRQ_PORT        PORTD
-#define IRQ_PIN         PORTD6
-#define IRQ_VECTOR      PCINT2_vect
+#define IRQ_DDR         DDRB
+#define IRQ_PORT        PORTB
+#define IRQ_PIN         PORTB0
+#define IRQ_VECTOR      PCINT0_vect
 
 // Definitions for selecting and enabling the radio
 #define CSN_HIGH()    PORTB |=  1<<SPI_SS_PIN;
@@ -184,8 +184,8 @@ void Radio_Init() {
 
     // Enable radio interrupt.  This interrupt is triggered when data are received and when a transmission completes.
     IRQ_DDR &= ~(1<<IRQ_PIN);
-    PCMSK2 |= (1<<PCINT22);
-    PCICR  |= (1<<PCIE2);
+    PCMSK0 |= (1<<PCINT0);
+    PCICR  |= (1<<PCIE0);
 
     // A 1.5 ms delay is required between power down and power up states (controlled by PWR_UP bit in CONFIG)
     _delay_ms(2);
