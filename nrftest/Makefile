@@ -15,27 +15,12 @@ FORMAT = ihex
 TARGET = nrftest
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = main.c radio.c spi.c
-
-# List Assembler source files here.
-#     Make them always end in a capital .S.  Files ending in a lowercase .s
-#     will not be considered source files but generated files (assembler
-#     output from the compiler), and will be deleted upon "make clean"!
-#     Even though the DOS/Win* filesystem matches both .s and .S the same,
-#     it will preserve the spelling of the filenames, and gcc itself does
-#     care about how the name is spelled on its command-line.
-ASRC = 
+SRC = main.c
 
 # Optimization level, can be [0, 1, 2, 3, s]. 
 #     0 = turn off optimization. s = optimize for size.
 #     (Note: 3 is not always the best optimization level. See avr-libc FAQ.)
 OPT = s
-
-# Debugging format.
-#     Native formats for AVR-GCC's -g are dwarf-2 [default] or stabs.
-#     AVR Studio 4.10 requires dwarf-2.
-#     AVR [Extended] COFF format requires stabs, plus an avr-objcopy run.
-DEBUG = dwarf-2
 
 # List any extra directories to look for include files here.
 #     Each directory must be seperated by a space.
@@ -54,7 +39,7 @@ CSTANDARD = -std=gnu99
 CDEFS = -DF_CPU=$(F_CPU)UL #-DSOFTUART_INVERTED
 
 # Place -I options here
-CINCS =
+CINCS = -I../lib/
 
 
 #---------------- Compiler Options ----------------
@@ -64,8 +49,7 @@ CINCS =
 #  -Wall...:     warning level
 #  -Wa,...:      tell GCC to pass this to the assembler.
 #    -adhlns...: create assembler listing
-CFLAGS = -g$(DEBUG)
-CFLAGS += $(CDEFS) $(CINCS)
+CFLAGS = $(CDEFS) $(CINCS)
 CFLAGS += -O$(OPT)
 CFLAGS += -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS += -Wall -Wstrict-prototypes
@@ -73,16 +57,6 @@ CFLAGS += -Wa,-adhlns=$(<:.c=.lst)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += $(CSTANDARD)
 CFLAGS += -flto
-
-
-#---------------- Assembler Options ----------------
-#  -Wa,...:   tell GCC to pass this to the assembler.
-#  -ahlms:    create listing
-#  -gstabs:   have the assembler create line number information; note that
-#             for use in COFF files, additional information about filenames
-#             and function names needs to be present in the assembler source
-#             files -- see avr-libc docs [FIXME: not yet described there]
-ASFLAGS = -Wa,-adhlns=$(<:.S=.lst),-gstabs 
 
 
 #---------------- Library Options ----------------
@@ -114,8 +88,8 @@ MATH_LIB = -lm
 #  -Wl,...:     tell GCC to pass this to linker.
 #    -Map:      create map file
 #    --cref:    add cross reference to  map file
-LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
-LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
+LDFLAGS = -Wl,-Map=$(TARGET).map,--cref -L../lib/
+LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB) -lnrf24l01p
 LDLAGS += -Wl,-flto
 
 
@@ -148,7 +122,6 @@ AVRDUDE_FLAGS += $(AVRDUDE_VERBOSE)
 
 
 # Define programs and commands.
-SHELL = sh
 CC = avr-gcc
 OBJCOPY = avr-objcopy
 OBJDUMP = avr-objdump
@@ -157,10 +130,10 @@ AVRDUDE = avrdude
 REMOVE = rm -f
 
 # Define all object files.
-OBJ = $(SRC:.c=.o) $(ASRC:.S=.o) 
+OBJ = $(SRC:.c=.o)
 
 # Define all listing files.
-LST = $(SRC:.c=.lst) $(ASRC:.S=.lst) 
+LST = $(SRC:.c=.lst)
 
 # Compiler flags to generate dependency files.
 GENDEPFLAGS = -MD -MP -MF .dep/$(@F).d
@@ -168,7 +141,6 @@ GENDEPFLAGS = -MD -MP -MF .dep/$(@F).d
 # Combine all necessary flags and optional flags.
 # Add target processor to flags.
 ALL_CFLAGS = -mmcu=$(MCU) -I. $(CFLAGS) $(GENDEPFLAGS)
-ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 
 # Default target.
 all: build size
@@ -191,10 +163,6 @@ burn: $(TARGET).hex $(TARGET).eep size
 
 burn-fuse:
 	$(AVRDUDE) $(AVRDUDE_FLAGS) -U lfuse:w:$(AVRDUDE_FUSE_LOW):m -U hfuse:w:$(AVRDUDE_FUSE_HIGH):m
-
-burn-optiboot:
-	$(AVRDUDE) $(AVRDUDE_FLAGS) -U lfuse:w:0xD6:m -U hfuse:w:0xDE:m
-	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:optiboot_atmega328.hex
 
 
 # Create final output files (.hex, .eep) from ELF output file.
@@ -224,16 +192,6 @@ burn-optiboot:
 # Compile: create object files from C source files.
 %.o : %.c
 	$(CC) -c $(ALL_CFLAGS) $< -o $@ 
-
-
-# Compile: create assembler files from C source files.
-%.s : %.c
-	$(CC) -S $(ALL_CFLAGS) $< -o $@
-
-
-# Assemble: create object files from assembler source files.
-%.o : %.S
-	$(CC) -c $(ALL_ASFLAGS) $< -o $@
 
 # Create preprocessed source for use in sending a bug report.
 %.i : %.c

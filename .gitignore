@@ -1,6 +1,7 @@
 .*.swp
 .dep
 *.o
+*.a
 *.lst
 *.sym
 *.map
