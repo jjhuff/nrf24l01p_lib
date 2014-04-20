@@ -20,11 +20,7 @@
 // Pin definitions
 #define CE_DDR          DDRB
 #define CE_PORT         PORTB
-#define CE_PIN          PORTB0
-
-#define CSN_DDR         DDRB
-#define CSN_PORT        PORTB
-#define CSN_PIN         PORTB1
+#define CE_PIN          PORTB1
 
 #define IRQ_DDR         DDRD
 #define IRQ_PORT        PORTD
@@ -32,8 +28,8 @@
 #define IRQ_VECTOR      PCINT2_vect
 
 // Definitions for selecting and enabling the radio
-#define CSN_HIGH()    CSN_PORT |=  1<<CSN_PIN;
-#define CSN_LOW()     CSN_PORT &= ~(1<<CSN_PIN);
+#define CSN_HIGH()    PORTB |=  1<<SPI_SS_PIN;
+#define CSN_LOW()     PORTB &= ~(1<<SPI_SS_PIN);
 #define CE_HIGH()     CE_PORT |=  1<<CE_PIN;
 #define CE_LOW()      CE_PORT &= ~(1<<CE_PIN);
 
@@ -155,7 +151,6 @@ void Radio_Init() {
 
     // set as output
     CE_DDR |= 1<<CE_PIN;
-    CSN_DDR |= 1<<CSN_PIN;
 
     // A 10.3 ms delay is required between power off and power on states (controlled by 3.3 V supply).
     _delay_ms(11);
