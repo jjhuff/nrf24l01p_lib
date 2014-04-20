@@ -57,17 +57,18 @@ void Radio_Init(void);
  *         then the first byte of address is used as the LSB of the pipe's address (i.e. you only pass a 1-byte address, with the
  *         four MSBytes of the pipe's address left implied).  For example, this will set the first four pipe addresses above:
  *                 uint8_t address[5] = {0x01, 0x23, 0x45, 0x67, 0x89};
- *                 Radio_Configure_Rx(RADIO_PIPE_0, address, ENABLE);
+ *                 Radio_Configure_Rx(RADIO_PIPE_0, address, 1, 1);
  *                 address = {0x98, 0x76, 0x54, 0x32, 0x10};
- *                 Radio_Configure_Rx(RADIO_PIPE_1, address, ENABLE);
+ *                 Radio_Configure_Rx(RADIO_PIPE_1, address, 1, 1);
  *                 address[0] = 0xAB;
- *                 Radio_Configure_Rx(RADIO_PIPE_2, address, ENABLE);
+ *                 Radio_Configure_Rx(RADIO_PIPE_2, address, 1, 1);
  *                 address[0] = 0xBC;
- *                 Radio_Configure_Rx(RADIO_PIPE_3, address, ENABLE);
+ *                 Radio_Configure_Rx(RADIO_PIPE_3, address, 1, 1);
  *                 ...
  * \param enable Enable or disable the pipe.
+ * \param enable_aa Enable or disable the Auto-Ack
  */
-void Radio_Configure_Rx(uint8_t pipe, const uint8_t* address, uint8_t enable);
+void Radio_Configure_Rx(uint8_t pipe, const uint8_t* address, uint8_t enable, uint8_t enable_aa);
 
 /**
  * Configure the radio transceiver.

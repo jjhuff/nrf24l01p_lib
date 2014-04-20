@@ -34,8 +34,8 @@ int main(void)
     UART_Init();
     Radio_Init();
     Radio_Configure(110, RADIO_250KBPS, RADIO_HIGH_POWER);
-    Radio_Configure_Rx(0, address[0], 1);
-    Radio_Configure_Rx(1, address[2], 1);
+    Radio_Configure_Rx(0, address[0], 1, 1);
+    Radio_Configure_Rx(1, address[2], 1, 1);
 
     //setup LED
     DDRD |= 1<<PORTD2;
@@ -72,7 +72,7 @@ int main(void)
                 pkt.timestamp = (tx_count++);
                 printf("TX 0: %d\n", pkt.timestamp);
                 Radio_Set_Tx_Addr(address[0]);
-                Radio_Transmit(&pkt, sizeof(pkt));
+                Radio_Transmit(&pkt, 16);
                 _delay_ms(250);
                 break;
             case 'b':
@@ -81,7 +81,7 @@ int main(void)
                 pkt.timestamp = (tx_count++);
                 printf("TX 1: %d\n", pkt.timestamp);
                 Radio_Set_Tx_Addr(address[1]);
-                Radio_Transmit(&pkt, sizeof(pkt));
+                Radio_Transmit(&pkt, 16);
                 _delay_ms(250);
                 break;
             case 'c':
@@ -94,11 +94,11 @@ int main(void)
                 _delay_ms(250);
                 break;
             case '0':
-                Radio_Configure_Rx(0, address[0], 1);
+                Radio_Configure_Rx(0, address[0], 1, 1);
                 mode = 0;
                 break;
             case '1':
-                Radio_Configure_Rx(0, address[1], 1);
+                Radio_Configure_Rx(0, address[1], 1, 1);
                 mode = 0;
                 break;
             default:
@@ -116,7 +116,7 @@ void radio_rxhandler(uint8_t pipenumber) {
         if (len == 0) {
             break;
         }
-        printf("RX: %d %d\n", pipenumber, pkt.timestamp);
+        printf("RX: %d %d %d\n", pipenumber, len, pkt.timestamp);
         led_toggler = !led_toggler;
         if (led_toggler) {
             PORTD |= 1<<PORTD2;

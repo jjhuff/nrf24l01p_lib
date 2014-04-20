@@ -234,9 +234,8 @@ void Radio_Configure(uint8_t channel, RADIO_DATA_RATE dr, RADIO_TX_POWER power) 
 // default address for pipe 3 is 0xc2c2c2c2c4 (disabled)
 // default address for pipe 4 is 0xc2c2c2c2c5 (disabled)
 // default address for pipe 5 is 0xc2c2c2c2c6 (disabled)
-void Radio_Configure_Rx(uint8_t pipe, const uint8_t* address, uint8_t enable) {
+void Radio_Configure_Rx(uint8_t pipe, const uint8_t* address, uint8_t enable, uint8_t enable_aa) {
     uint8_t value;
-    uint8_t use_aa = 1;
 
     // store the pipe 0 address so that it can be overwritten when transmitting with auto-ack enabled.
     if (pipe == 0) {
@@ -253,7 +252,7 @@ void Radio_Configure_Rx(uint8_t pipe, const uint8_t* address, uint8_t enable) {
 
     // Set auto-ack.
     get_register(EN_AA, &value, 1);
-    if (use_aa) {
+    if (enable_aa) {
         value |= (1<<pipe);
     } else {
         value &= ~(1<<pipe);
