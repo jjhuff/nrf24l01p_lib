@@ -18,14 +18,14 @@
 #define ADDRESS_LENGTH 5
 
 // Pin definitions
-#define CE_DDR          DDRB
-#define CE_PORT         PORTB
-#define CE_PIN          PORTB1
+#define CE_DDR          DDRC
+#define CE_PORT         PORTC
+#define CE_PIN          PORTC0
 
-#define IRQ_DDR         DDRB
-#define IRQ_PORT        PORTB
-#define IRQ_PIN         PORTB0
-#define IRQ_VECTOR      PCINT0_vect
+#define IRQ_DDR         DDRC
+#define IRQ_PORT        PORTC
+#define IRQ_PIN         PORTC1
+#define IRQ_VECTOR      PCINT9_vect
 
 // Definitions for selecting and enabling the radio
 #define CSN_HIGH()    PORTB |=  1<<SPI_SS_PIN;
@@ -184,8 +184,8 @@ void Radio_Init() {
 
     // Enable radio interrupt.  This interrupt is triggered when data are received and when a transmission completes.
     IRQ_DDR &= ~(1<<IRQ_PIN);
-    PCMSK0 |= (1<<PCINT0);
-    PCICR  |= (1<<PCIE0);
+    PCMSK1 |= (1<<PCINT9);
+    PCICR  |= (1<<PCIE1);
 
     // A 1.5 ms delay is required between power down and power up states (controlled by PWR_UP bit in CONFIG)
     _delay_ms(2);
