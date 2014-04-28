@@ -12,7 +12,7 @@ F_CPU = 16000000
 TARGET = libnrf24l01p
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = radio.c spi.c
+SRC = radio.c spi.c net.c
 
 # Optimization level, can be [0, 1, 2, 3, s]. 
 #     0 = turn off optimization. s = optimize for size.

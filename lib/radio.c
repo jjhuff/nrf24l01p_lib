@@ -368,6 +368,7 @@ ISR(IRQ_VECTOR) {
     if (status & (1<<RX_DR)) {
         uint8_t pipe_number =  (status & 0xE) >> 1;
         radio_rxhandler(pipe_number);
+        send_instruction_simple(FLUSH_RX);
     }
 
     // We can get the TX_DS or the MAX_RT interrupt, but not both.
@@ -377,6 +378,7 @@ ISR(IRQ_VECTOR) {
         tx_last_status = RADIO_TX_SUCCESS;
         transmit_lock = 0;
     } else if (status & (1<<MAX_RT)) {
+        puts("MAX_RT");
         send_instruction_simple(FLUSH_TX);
         reset_pipe0_address();
         set_rx_mode();
